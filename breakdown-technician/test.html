@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technician Dashboard - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Technician Dashboard - Test Page</h1>
+    
+    <div class="test-card">
+        <h2>Configuration Test</h2>
+        <p>Testing Firebase and EmailJS configuration...</p>
+        <div id="configStatus">Loading...</div>
+        <button onclick="testConfiguration()">Test Configuration</button>
+    </div>
+
+    <div class="test-card">
+        <h2>Firebase Connection Test</h2>
+        <p>Testing Firebase connection and authentication...</p>
+        <div id="firebaseStatus">Not tested</div>
+        <button onclick="testFirebase()">Test Firebase</button>
+    </div>
+
+    <div class="test-card">
+        <h2>EmailJS Test</h2>
+        <p>Testing EmailJS configuration...</p>
+        <div id="emailjsStatus">Not tested</div>
+        <button onclick="testEmailJS()">Test EmailJS</button>
+    </div>
+
+    <div class="test-card">
+        <h2>Test Log</h2>
+        <div id="testLog" class="log">Test log will appear here...</div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.3.3/dist/email.min.js"></script>
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = 'Test log cleared...\n';
+        }
+
+        function setStatus(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<span class="status status-${type}">${message}</span>`;
+        }
+
+        function testConfiguration() {
+            log('Testing configuration...');
+            
+            try {
+                if (typeof firebaseConfig === 'undefined') {
+                    setStatus('configStatus', 'Firebase config not found', 'error');
+                    log('ERROR: Firebase config not found');
+                    return;
+                }
+
+                if (typeof emailjsConfig === 'undefined') {
+                    setStatus('configStatus', 'EmailJS config not found', 'error');
+                    log('ERROR: EmailJS config not found');
+                    return;
+                }
+
+                // Check if config values are set
+                const firebaseKeys = Object.keys(firebaseConfig);
+                const emailjsKeys = Object.keys(emailjsConfig);
+                
+                const hasFirebaseConfig = firebaseKeys.every(key => 
+                    firebaseConfig[key] && firebaseConfig[key] !== 'your-api-key-here'
+                );
+                
+                const hasEmailjsConfig = emailjsKeys.every(key => 
+                    emailjsConfig[key] && emailjsConfig[key] !== 'your-service-id'
+                );
+
+                if (hasFirebaseConfig && hasEmailjsConfig) {
+                    setStatus('configStatus', 'Configuration looks good', 'success');
+                    log('SUCCESS: Configuration values are set');
+                } else {
+                    setStatus('configStatus', 'Configuration incomplete', 'warning');
+                    log('WARNING: Some configuration values are not set');
+                }
+            } catch (error) {
+                setStatus('configStatus', 'Configuration error', 'error');
+                log('ERROR: ' + error.message);
+            }
+        }
+
+        async function testFirebase() {
+            log('Testing Firebase connection...');
+            setStatus('firebaseStatus', 'Testing...', 'warning');
+            
+            try {
+                // Import Firebase modules
+                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js');
+                const { getAuth } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js');
+                const { getDatabase } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js');
+                
+                // Initialize Firebase
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const database = getDatabase(app);
+                
+                log('SUCCESS: Firebase initialized successfully');
+                setStatus('firebaseStatus', 'Firebase connected', 'success');
+                
+            } catch (error) {
+                log('ERROR: Firebase connection failed - ' + error.message);
+                setStatus('firebaseStatus', 'Firebase connection failed', 'error');
+            }
+        }
+
+        async function testEmailJS() {
+            log('Testing EmailJS...');
+            setStatus('emailjsStatus', 'Testing...', 'warning');
+            
+            try {
+                // Initialize EmailJS
+                emailjs.init(emailjsConfig.publicKey);
+                
+                log('SUCCESS: EmailJS initialized successfully');
+                setStatus('emailjsStatus', 'EmailJS ready', 'success');
+                
+            } catch (error) {
+                log('ERROR: EmailJS initialization failed - ' + error.message);
+                setStatus('emailjsStatus', 'EmailJS initialization failed', 'error');
+            }
+        }
+
+        // Auto-test configuration on load
+        window.addEventListener('load', () => {
+            log('Test page loaded');
+            testConfiguration();
+        });
+    </script>
+</body>
+</html>
+

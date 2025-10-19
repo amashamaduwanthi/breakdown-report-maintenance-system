@@ -1,0 +1,26 @@
+{
+  "name": "breakdown-technician",
+  "version": "1.0.0",
+  "description": "Technician Dashboard for Breakdown Reporting System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "setup": "node setup.js"
+  },
+  "dependencies": {
+    "http": "^0.0.1-security",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "url": "^0.11.3"
+  },
+  "keywords": [
+    "breakdown",
+    "technician",
+    "dashboard",
+    "firebase",
+    "emailjs"
+  ],
+  "author": "DETZ Intern",
+  "license": "MIT"
+}

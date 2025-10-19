@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmailJS Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>EmailJS Test</h1>
+        <p>Test your EmailJS configuration by sending a test email.</p>
+        
+        <div class="form-group">
+            <label for="technicianEmail">Technician Email:</label>
+            <input type="email" id="technicianEmail" placeholder="technician@example.com" value="test@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="technicianName">Technician Name:</label>
+            <input type="text" id="technicianName" placeholder="John Doe" value="Test Technician">
+        </div>
+        
+        <div class="form-group">
+            <label for="taskDescription">Task Description:</label>
+            <textarea id="taskDescription" rows="3" placeholder="Describe the breakdown task">Test breakdown task - Server room AC unit not working properly.</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="reporterName">Reporter Name:</label>
+            <input type="text" id="reporterName" placeholder="Jane Smith" value="Test Reporter">
+        </div>
+        
+        <div class="form-group">
+            <label for="reporterEmail">Reporter Email:</label>
+            <input type="email" id="reporterEmail" placeholder="reporter@example.com" value="reporter@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="priority">Priority:</label>
+            <select id="priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+        
+        <button onclick="testEmail()">Send Test Email</button>
+        <button onclick="testConfiguration()">Test Configuration</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.3.3/dist/email.min.js"></script>
+    <script>
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function testConfiguration() {
+            showStatus('Testing configuration...', 'info');
+            
+            try {
+                if (typeof firebaseConfig === 'undefined') {
+                    showStatus('❌ Firebase config not found', 'error');
+                    return;
+                }
+
+                if (typeof emailjsConfig === 'undefined') {
+                    showStatus('❌ EmailJS config not found', 'error');
+                    return;
+                }
+
+                // Check if config values are set
+                const hasFirebaseConfig = Object.values(firebaseConfig).every(value => 
+                    value && !value.includes('your-')
+                );
+                
+                const hasEmailjsConfig = Object.values(emailjsConfig).every(value => 
+                    value && !value.includes('your-')
+                );
+
+                if (hasFirebaseConfig && hasEmailjsConfig) {
+                    showStatus('✅ Configuration looks good!', 'success');
+                } else {
+                    showStatus('⚠️ Some configuration values are not set properly', 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Configuration error: ' + error.message, 'error');
+            }
+        }
+
+        async function testEmail() {
+            showStatus('Sending test email...', 'info');
+            
+            try {
+                // Initialize EmailJS
+                emailjs.init(emailjsConfig.publicKey);
+                
+                const templateParams = {
+                    to_email: document.getElementById('technicianEmail').value,
+                    technician_name: document.getElementById('technicianName').value,
+                    task_description: document.getElementById('taskDescription').value,
+                    reporter_name: document.getElementById('reporterName').value,
+                    reporter_email: document.getElementById('reporterEmail').value,
+                    priority: document.getElementById('priority').value,
+                    task_id: 'TEST-' + Date.now(),
+                    created_at: new Date().toLocaleString()
+                };
+
+                console.log('Sending email with parameters:', templateParams);
+
+                const result = await emailjs.send(
+                    emailjsConfig.serviceId,
+                    emailjsConfig.templateId,
+                    templateParams
+                );
+
+                showStatus('✅ Test email sent successfully! Check the recipient email.', 'success');
+                console.log('Email sent successfully:', result);
+                
+            } catch (error) {
+                console.error('Email error:', error);
+                showStatus('❌ Failed to send email: ' + error.text, 'error');
+            }
+        }
+
+        // Test configuration on load
+        window.addEventListener('load', testConfiguration);
+    </script>
+</body>
+</html>

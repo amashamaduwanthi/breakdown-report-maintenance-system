@@ -184,7 +184,8 @@ export function subscribeTechnicians(callback: (profiles: UserProfile[]) => void
 
 export async function assignTechnician(
   breakdownId: string,
-  technician: { uid: string; name: string }
+  technician: { uid: string; name: string },
+  breakdownData?: BreakdownRecord
 ) {
   const db = getFirebaseDatabase();
   const breakdownRef = ref(db, `breakdowns/${breakdownId}`);
@@ -192,6 +193,41 @@ export async function assignTechnician(
     assignedTechnician: technician,
     "timestamps/updatedAt": serverTimestamp()
   });
+
+  // Send email notification if breakdown data is provided
+  // Using console notification as fallback due to EmailJS account being blocked
+  if (breakdownData) {
+    try {
+      const { alternativeEmailService } = await import("../services/alternativeEmailService");
+      
+      // Get technician email from user profile
+      const technicianProfile = await fetchUserProfile(technician.uid);
+      const technicianEmail = technicianProfile?.email || '';
+      
+      const emailParams = {
+        technicianEmail: technicianEmail,
+        technicianName: technician.name,
+        taskDescription: breakdownData.message,
+        reporterName: breakdownData.reporterName,
+        reporterEmail: breakdownData.reporterEmail,
+        priority: breakdownData.priority,
+        taskId: breakdownId,
+        createdAt: breakdownData.timestamps?.createdAt 
+          ? new Date(breakdownData.timestamps.createdAt).toLocaleString() 
+          : new Date().toLocaleString()
+      };
+      
+      // Try webhook first, fallback to console notification
+      const webhookSuccess = await alternativeEmailService.sendTaskAssignmentEmail(emailParams);
+      if (!webhookSuccess) {
+        await alternativeEmailService.sendConsoleNotification(emailParams);
+      }
+      
+    } catch (error) {
+      console.error('Error sending assignment notification:', error);
+      // Don't throw error to prevent breaking the assignment process
+    }
+  }
 }
 
 export async function updateBreakdownStatus(

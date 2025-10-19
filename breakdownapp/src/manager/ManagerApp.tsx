@@ -396,7 +396,7 @@ function ReportCard({
     }
     setAssigning(true);
     try {
-      await assignTechnician(report.id, { uid: technician.uid, name: technician.displayName });
+      await assignTechnician(report.id, { uid: technician.uid, name: technician.displayName }, report);
     } catch (error) {
       console.error(error);
     } finally {
