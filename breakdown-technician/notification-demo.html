@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Notification Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .demo-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .success-btn { background: #28a745; }
+        .success-btn:hover { background: #218838; }
+        .error-btn { background: #dc3545; }
+        .error-btn:hover { background: #c82333; }
+    </style>
+</head>
+<body>
+    <div class="demo-card">
+        <h1>📧 Email Notification Demo</h1>
+        <p>Click the buttons below to see the email notification system in action.</p>
+        
+        <h3>Test Notifications:</h3>
+        <button onclick="showSuccessNotification()" class="success-btn">Show Success Notification</button>
+        <button onclick="showErrorNotification()" class="error-btn">Show Error Notification</button>
+        <button onclick="showMultipleNotifications()">Show Multiple Notifications</button>
+        
+        <h3>What You'll See:</h3>
+        <ul>
+            <li><strong>Success Notification:</strong> Green notification with 📧 icon when email is sent successfully</li>
+            <li><strong>Error Notification:</strong> Red notification with ❌ icon when email fails</li>
+            <li><strong>Auto-dismiss:</strong> Notifications automatically disappear after 5 seconds</li>
+            <li><strong>Animation:</strong> Smooth slide-in and slide-out animations</li>
+        </ul>
+        
+        <h3>In the Manager App:</h3>
+        <p>When you assign a task to a technician, you'll see:</p>
+        <ul>
+            <li>📧 <strong>Success:</strong> "Email Sent! Task assignment notification sent to technician"</li>
+            <li>❌ <strong>Error:</strong> "Email Failed! Could not send notification to technician"</li>
+        </ul>
+    </div>
+
+    <script>
+        function showSuccessNotification() {
+            showNotification('Task assignment notification sent to technician', 'success');
+        }
+
+        function showErrorNotification() {
+            showNotification('Could not send notification to technician', 'error');
+        }
+
+        function showMultipleNotifications() {
+            showNotification('First notification', 'success');
+            setTimeout(() => showNotification('Second notification', 'error'), 1000);
+            setTimeout(() => showNotification('Third notification', 'success'), 2000);
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#28a745' : '#dc3545'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                max-width: 300px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">${type === 'success' ? '📧' : '❌'}</span>
+                    <div>
+                        <div style="font-weight: bold;">${type === 'success' ? 'Email Sent!' : 'Email Failed!'}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">${message}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Add animation styles if not already added
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

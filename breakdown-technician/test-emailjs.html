@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EmailJS Test</title>
+    <title>EmailJS Test - Technician Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -56,8 +56,8 @@
 </head>
 <body>
     <div class="test-card">
-        <h1>EmailJS Test</h1>
-        <p>Test your EmailJS configuration by sending a test email.</p>
+        <h1>📧 EmailJS Test</h1>
+        <p>Test your EmailJS configuration for the technician dashboard.</p>
         
         <div class="form-group">
             <label for="technicianEmail">Technician Email:</label>
@@ -99,9 +99,15 @@
         <div id="status"></div>
     </div>
 
-    <script src="firebase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.3.3/dist/email.min.js"></script>
     <script>
+        // EmailJS configuration
+        const emailjsConfig = {
+            serviceId: "service_13xst74",
+            templateId: "template_vp34whe",
+            publicKey: "IplMJPtelGI6fL9UO"
+        };
+
         function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('status');
             statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
@@ -111,30 +117,17 @@
             showStatus('Testing configuration...', 'info');
             
             try {
-                if (typeof firebaseConfig === 'undefined') {
-                    showStatus('❌ Firebase config not found', 'error');
+                // Check if EmailJS is loaded
+                if (typeof emailjs === 'undefined') {
+                    showStatus('❌ EmailJS not loaded', 'error');
                     return;
                 }
 
-                if (typeof emailjsConfig === 'undefined') {
-                    showStatus('❌ EmailJS config not found', 'error');
-                    return;
-                }
-
-                // Check if config values are set
-                const hasFirebaseConfig = Object.values(firebaseConfig).every(value => 
-                    value && !value.includes('your-')
-                );
+                // Initialize EmailJS
+                emailjs.init(emailjsConfig.publicKey);
                 
-                const hasEmailjsConfig = Object.values(emailjsConfig).every(value => 
-                    value && !value.includes('your-')
-                );
-
-                if (hasFirebaseConfig && hasEmailjsConfig) {
-                    showStatus('✅ Configuration looks good!', 'success');
-                } else {
-                    showStatus('⚠️ Some configuration values are not set properly', 'error');
-                }
+                showStatus('✅ EmailJS configuration looks good!', 'success');
+                
             } catch (error) {
                 showStatus('❌ Configuration error: ' + error.message, 'error');
             }

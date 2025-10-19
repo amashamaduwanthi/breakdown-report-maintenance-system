@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "setup": "node setup.js"
+    "dev": "node server.js"
   },
   "dependencies": {
     "http": "^0.0.1-security",
@@ -19,7 +18,8 @@
     "technician",
     "dashboard",
     "firebase",
-    "emailjs"
+    "emailjs",
+    "real-time"
   ],
   "author": "DETZ Intern",
   "license": "MIT"

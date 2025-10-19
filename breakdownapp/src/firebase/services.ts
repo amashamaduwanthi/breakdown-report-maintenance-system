@@ -32,7 +32,7 @@ export async function registerReporter(
   email: string,
   password: string,
   displayName?: string,
-  role: UserRole = "reporter"
+  role: UserRole = "manager"
 ) {
   const auth = getFirebaseAuth();
   const credentials = await createUserWithEmailAndPassword(auth, email, password);
@@ -57,7 +57,7 @@ export async function logoutUser() {
 export async function ensureUserProfile(
   user: User,
   displayName?: string,
-  role: UserRole = "reporter"
+  role: UserRole = "manager"
 ) {
   const db = getFirebaseDatabase();
   const profileRef = ref(db, `users/${user.uid}`);
@@ -195,36 +195,28 @@ export async function assignTechnician(
   });
 
   // Send email notification if breakdown data is provided
-  // Using console notification as fallback due to EmailJS account being blocked
   if (breakdownData) {
     try {
-      const { alternativeEmailService } = await import("../services/alternativeEmailService");
-      
       // Get technician email from user profile
       const technicianProfile = await fetchUserProfile(technician.uid);
       const technicianEmail = technicianProfile?.email || '';
       
-      const emailParams = {
-        technicianEmail: technicianEmail,
-        technicianName: technician.name,
-        taskDescription: breakdownData.message,
-        reporterName: breakdownData.reporterName,
-        reporterEmail: breakdownData.reporterEmail,
-        priority: breakdownData.priority,
-        taskId: breakdownId,
-        createdAt: breakdownData.timestamps?.createdAt 
-          ? new Date(breakdownData.timestamps.createdAt).toLocaleString() 
-          : new Date().toLocaleString()
-      };
-      
-      // Try webhook first, fallback to console notification
-      const webhookSuccess = await alternativeEmailService.sendTaskAssignmentEmail(emailParams);
-      if (!webhookSuccess) {
-        await alternativeEmailService.sendConsoleNotification(emailParams);
+      if (technicianEmail) {
+        // Send email notification using EmailJS
+        await sendTaskAssignmentEmail(technicianEmail, {
+          technicianName: technician.name,
+          taskDescription: breakdownData.message,
+          reporterName: breakdownData.reporterName,
+          reporterEmail: breakdownData.reporterEmail,
+          priority: breakdownData.priority,
+          taskId: breakdownId,
+          createdAt: breakdownData.timestamps?.createdAt 
+            ? new Date(breakdownData.timestamps.createdAt).toLocaleString() 
+            : new Date().toLocaleString()
+        });
       }
-      
     } catch (error) {
-      console.error('Error sending assignment notification:', error);
+      console.error('Error sending assignment email:', error);
       // Don't throw error to prevent breaking the assignment process
     }
   }
@@ -265,6 +257,156 @@ export async function appendBreakdownUpdate(
     ...updateData,
     createdAt: serverTimestamp()
   });
+}
+
+// EmailJS configuration
+const emailjsConfig = {
+  serviceId: "service_13xst74",
+  templateId: "template_vp34whe",
+  publicKey: "IplMJPtelGI6fL9UO"
+};
+
+// EmailJS email sending function
+async function sendTaskAssignmentEmail(technicianEmail: string, taskDetails: {
+  technicianName: string;
+  taskDescription: string;
+  reporterName: string;
+  reporterEmail: string;
+  priority: string;
+  taskId: string;
+  createdAt: string;
+}) {
+  try {
+    // Dynamically import EmailJS
+    const emailjs = await import('@emailjs/browser');
+    
+    // Initialize EmailJS
+    emailjs.init(emailjsConfig.publicKey);
+    
+    const templateParams = {
+      to_email: technicianEmail,
+      technician_name: taskDetails.technicianName,
+      task_description: taskDetails.taskDescription,
+      reporter_name: taskDetails.reporterName,
+      reporter_email: taskDetails.reporterEmail,
+      priority: taskDetails.priority,
+      task_id: taskDetails.taskId,
+      created_at: taskDetails.createdAt
+    };
+
+    console.log('📧 Sending task assignment email...', templateParams);
+
+    const result = await emailjs.send(
+      emailjsConfig.serviceId,
+      emailjsConfig.templateId,
+      templateParams
+    );
+
+    console.log('✅ Task assignment email sent successfully:', result);
+    
+    // Show notification to user
+    if (typeof window !== 'undefined') {
+      // Create a notification element
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        max-width: 300px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px;">📧</span>
+          <div>
+            <div style="font-weight: bold;">Email Sent!</div>
+            <div style="font-size: 12px; opacity: 0.9;">Task assignment notification sent to technician</div>
+          </div>
+        </div>
+      `;
+      
+      // Add animation styles
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 5000);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending task assignment email:', error);
+    
+    // Show error notification to user
+    if (typeof window !== 'undefined') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc3545;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        max-width: 300px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px;">❌</span>
+          <div>
+            <div style="font-weight: bold;">Email Failed!</div>
+            <div style="font-size: 12px; opacity: 0.9;">Could not send notification to technician</div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 5000);
+    }
+    
+    return false;
+  }
 }
 
 function inferDisplayName(email: string | null | undefined) {

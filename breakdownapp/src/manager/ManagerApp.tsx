@@ -47,7 +47,7 @@ export default function ManagerApp() {
     email: "",
     password: "",
     displayName: "",
-    role: "manager",
+    role: "",
     error: "",
     submitting: false
   });

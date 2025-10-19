@@ -5,17 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Technician Dashboard - Breakdown Reporting System</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Configuration -->
-    <script src="firebase-config.js"></script>
-    <!-- EmailJS -->
+    <!-- EmailJS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.3.3/dist/email.min.js"></script>
-    <!-- Email Service -->
-    <script src="email-service.js"></script>
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
         import { getDatabase, ref, onValue, update, serverTimestamp, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js';
+        // EmailJS will be loaded via script tag
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdibg6llB7PBhVd_VL35FaOtTnAB9w0TQ",
+            authDomain: "breakdown-report-7ce3a.firebaseapp.com",
+            databaseURL: "https://breakdown-report-7ce3a-default-rtdb.europe-west1.firebasedatabase.app/",
+            projectId: "breakdown-report-7ce3a",
+            storageBucket: "breakdown-report-7ce3a.firebasestorage.app",
+            messagingSenderId: "957822686255",
+            appId: "1:957822686255:web:107e975d62de1efe54e2da"
+        };
+
+        // EmailJS configuration
+        const emailjsConfig = {
+            serviceId: "service_13xst74",
+            templateId: "template_vp34whe",
+            publicKey: "IplMJPtelGI6fL9UO"
+        };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -23,24 +38,280 @@
         const database = getDatabase(app);
 
         // Initialize EmailJS
-        emailjs.init(emailjsConfig.publicKey);
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(emailjsConfig.publicKey);
+            console.log('✅ EmailJS initialized successfully');
+        } else {
+            console.error('❌ EmailJS not loaded');
+        }
 
-        // Make Firebase services globally available
-        window.auth = auth;
-        window.database = database;
-        window.onAuthStateChanged = onAuthStateChanged;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.signOut = signOut;
-        window.ref = ref;
-        window.onValue = onValue;
-        window.update = update;
-        window.serverTimestamp = serverTimestamp;
-        window.query = query;
-        window.orderByChild = orderByChild;
-        window.equalTo = equalTo;
+        // Global variables
+        let currentUser = null;
+        let userProfile = null;
+        let assignedTasks = [];
+        let authUnsubscribe = null;
+        let tasksUnsubscribe = null;
+        let profileUnsubscribe = null;
+
+        // DOM elements
+        const loginForm = document.getElementById('loginForm');
+        const dashboard = document.getElementById('dashboard');
+        const loginSection = document.getElementById('loginSection');
+        const userInfo = document.getElementById('userInfo');
+        const tasksList = document.getElementById('tasksList');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthState();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            if (loginForm) {
+                loginForm.addEventListener('submit', handleLogin);
+            }
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+        }
+
+        function checkAuthState() {
+            authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    await loadUserProfile();
+                    showDashboard();
+                } else {
+                    showLogin();
+                }
+            });
+        }
+
+        async function loadUserProfile() {
+            return new Promise((resolve) => {
+                const userRef = ref(database, `users/${currentUser.uid}`);
+                profileUnsubscribe = onValue(userRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        userProfile = snapshot.val();
+                        if (userProfile.role !== 'technician') {
+                            alert('Access denied. Only technicians can access this dashboard.');
+                            handleLogout();
+                            return;
+                        }
+                        loadAssignedTasks();
+                        resolve();
+                    } else {
+                        alert('User profile not found. Please contact administrator.');
+                        handleLogout();
+                    }
+                });
+            });
+        }
+
+        function loadAssignedTasks() {
+            const tasksRef = ref(database, 'breakdowns');
+            const tasksQuery = query(tasksRef, orderByChild('assignedTechnician/uid'), equalTo(currentUser.uid));
+            
+            tasksUnsubscribe = onValue(tasksQuery, (snapshot) => {
+                assignedTasks = [];
+                snapshot.forEach((childSnapshot) => {
+                    const task = {
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    };
+                    assignedTasks.push(task);
+                });
+                displayTasks();
+            });
+        }
+
+        function displayTasks() {
+            if (!tasksList) return;
+
+            tasksList.innerHTML = '';
+            
+            if (assignedTasks.length === 0) {
+                tasksList.innerHTML = '<div class="no-tasks">No assigned tasks</div>';
+                return;
+            }
+
+            assignedTasks.forEach(task => {
+                const taskElement = createTaskElement(task);
+                tasksList.appendChild(taskElement);
+            });
+        }
+
+        function createTaskElement(task) {
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task-card';
+            taskDiv.innerHTML = `
+                <div class="task-header">
+                    <h3>${escapeHtml(task.message)}</h3>
+                    <span class="status status-${task.status}">${getStatusLabel(task.status)}</span>
+                </div>
+                <div class="task-details">
+                    <p><strong>Reporter:</strong> ${escapeHtml(task.reporterName)} (${escapeHtml(task.reporterEmail)})</p>
+                    <p><strong>Priority:</strong> ${task.priority}</p>
+                    <p><strong>Created:</strong> ${formatDate(task.timestamps?.createdAt)}</p>
+                    ${task.fixDetails ? `<p><strong>Fix Details:</strong> ${escapeHtml(task.fixDetails)}</p>` : ''}
+                </div>
+                <div class="task-actions">
+                    <select id="statusSelect-${task.id}" onchange="updateTaskStatus('${task.id}', this.value)">
+                        <option value="approved" ${task.status === 'approved' ? 'selected' : ''}>Approved</option>
+                        <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="resolved" ${task.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                    </select>
+                    <button onclick="addTaskUpdate('${task.id}')" class="btn-update">Add Update</button>
+                </div>
+                <div class="task-updates" id="updates-${task.id}">
+                    ${renderTaskUpdates(task.updates)}
+                </div>
+            `;
+            return taskDiv;
+        }
+
+        function renderTaskUpdates(updates) {
+            if (!updates) return '<p class="no-updates">No updates yet</p>';
+            
+            const updatesList = Object.values(updates)
+                .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+                .map(update => `
+                    <div class="update-item">
+                        <div class="update-meta">
+                            <span class="update-author">${escapeHtml(update.authorName)}</span>
+                            <span class="update-time">${formatDate(update.createdAt)}</span>
+                        </div>
+                        <p class="update-message">${escapeHtml(update.message)}</p>
+                    </div>
+                `).join('');
+            
+            return `<div class="updates-list">${updatesList}</div>`;
+        }
+
+        async function updateTaskStatus(taskId, newStatus) {
+            try {
+                const taskRef = ref(database, `breakdowns/${taskId}`);
+                await update(taskRef, {
+                    status: newStatus,
+                    'timestamps/updatedAt': serverTimestamp()
+                });
+                
+                if (newStatus === 'resolved') {
+                    await update(taskRef, {
+                        'timestamps/resolvedAt': serverTimestamp()
+                    });
+                }
+                
+                // Add automatic update
+                await addTaskUpdate(taskId, `Status changed to ${getStatusLabel(newStatus)}`);
+                
+            } catch (error) {
+                console.error('Error updating task status:', error);
+                alert('Error updating task status');
+            }
+        }
+
+        async function addTaskUpdate(taskId, message = null) {
+            if (!message) {
+                message = prompt('Enter update message:');
+                if (!message) return;
+            }
+            
+            try {
+                const newUpdateRef = ref(database, `breakdowns/${taskId}/updates/${Date.now()}`);
+                await update(newUpdateRef, {
+                    authorUid: currentUser.uid,
+                    authorName: userProfile.displayName,
+                    message: message,
+                    createdAt: serverTimestamp()
+                });
+            } catch (error) {
+                console.error('Error adding task update:', error);
+                alert('Error adding task update');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                cleanup();
+                await signOut(auth);
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        function cleanup() {
+            if (authUnsubscribe) {
+                authUnsubscribe();
+                authUnsubscribe = null;
+            }
+            if (tasksUnsubscribe) {
+                tasksUnsubscribe();
+                tasksUnsubscribe = null;
+            }
+            if (profileUnsubscribe) {
+                profileUnsubscribe();
+                profileUnsubscribe = null;
+            }
+        }
+
+        function showLogin() {
+            if (loginSection) loginSection.style.display = 'block';
+            if (dashboard) dashboard.style.display = 'none';
+        }
+
+        function showDashboard() {
+            if (loginSection) loginSection.style.display = 'none';
+            if (dashboard) dashboard.style.display = 'block';
+            
+            if (userInfo && userProfile) {
+                userInfo.innerHTML = `
+                    <span>Welcome, ${escapeHtml(userProfile.displayName)}</span>
+                    <span class="role">Technician</span>
+                `;
+            }
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'pending': 'Pending',
+                'approved': 'Approved',
+                'in_progress': 'In Progress',
+                'resolved': 'Resolved',
+                'rejected': 'Rejected'
+            };
+            return labels[status] || status;
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return 'Unknown';
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Make functions globally available
+        window.updateTaskStatus = updateTaskStatus;
+        window.addTaskUpdate = addTaskUpdate;
     </script>
-    <!-- Main Application -->
-    <script src="app.js"></script>
 </head>
 <body>
     <div class="container">

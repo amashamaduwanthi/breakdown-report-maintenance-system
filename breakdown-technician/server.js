@@ -1,6 +1,4 @@
 // Simple HTTP server for the technician dashboard
-// This is needed because Firebase requires HTTPS or localhost for authentication
-
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -58,16 +56,15 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Technician Dashboard server running at http://localhost:${PORT}`);
+  console.log(`🚀 Technician Dashboard server running at http://localhost:${PORT}`);
   console.log('Press Ctrl+C to stop the server');
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\nShutting down server...');
+  console.log('\n🛑 Shutting down server...');
   server.close(() => {
-    console.log('Server closed');
+    console.log('✅ Server closed');
     process.exit(0);
   });
 });
-

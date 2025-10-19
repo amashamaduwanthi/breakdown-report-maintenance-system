@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Assignment Email - Technician Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>📧 Test Assignment Email</h1>
+        <p>Test the email notification system when a technician is assigned a task.</p>
+        
+        <div class="form-group">
+            <label for="technicianEmail">Technician Email:</label>
+            <input type="email" id="technicianEmail" placeholder="technician@example.com" value="test@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="technicianName">Technician Name:</label>
+            <input type="text" id="technicianName" placeholder="John Doe" value="Test Technician">
+        </div>
+        
+        <div class="form-group">
+            <label for="taskDescription">Task Description:</label>
+            <textarea id="taskDescription" rows="3" placeholder="Describe the breakdown task">Server room AC unit not working properly. Temperature is rising and equipment may be at risk.</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="reporterName">Reporter Name:</label>
+            <input type="text" id="reporterName" placeholder="Jane Smith" value="Test Reporter">
+        </div>
+        
+        <div class="form-group">
+            <label for="reporterEmail">Reporter Email:</label>
+            <input type="email" id="reporterEmail" placeholder="reporter@example.com" value="reporter@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="priority">Priority:</label>
+            <select id="priority">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high" selected>High</option>
+            </select>
+        </div>
+        
+        <button onclick="testAssignmentEmail()">Send Assignment Email</button>
+        <button onclick="testConfiguration()">Test Configuration</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Test Log</h2>
+        <div id="testLog" class="log">Test log will appear here...</div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.3.3/dist/email.min.js"></script>
+    <script>
+        // EmailJS configuration
+        const emailjsConfig = {
+            serviceId: "service_13xst74",
+            templateId: "template_vp34whe",
+            publicKey: "IplMJPtelGI6fL9UO"
+        };
+
+        function log(message) {
+            const logDiv = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = 'Test log cleared...\n';
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#28a745' : '#dc3545'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                max-width: 300px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">${type === 'success' ? '📧' : '❌'}</span>
+                    <div>
+                        <div style="font-weight: bold;">${type === 'success' ? 'Email Sent!' : 'Email Failed!'}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">${message}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Add animation styles if not already added
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        function testConfiguration() {
+            log('Testing EmailJS configuration...');
+            showStatus('Testing configuration...', 'info');
+            
+            try {
+                // Check if EmailJS is loaded
+                if (typeof emailjs === 'undefined') {
+                    showStatus('❌ EmailJS not loaded', 'error');
+                    log('ERROR: EmailJS not loaded');
+                    return;
+                }
+
+                // Initialize EmailJS
+                emailjs.init(emailjsConfig.publicKey);
+                
+                log('SUCCESS: EmailJS initialized successfully');
+                showStatus('✅ EmailJS configuration looks good!', 'success');
+                
+            } catch (error) {
+                log('ERROR: Configuration error - ' + error.message);
+                showStatus('❌ Configuration error: ' + error.message, 'error');
+            }
+        }
+
+        async function testAssignmentEmail() {
+            log('Testing assignment email...');
+            showStatus('Sending assignment email...', 'info');
+            
+            try {
+                // Initialize EmailJS
+                emailjs.init(emailjsConfig.publicKey);
+                
+                const templateParams = {
+                    to_email: document.getElementById('technicianEmail').value,
+                    technician_name: document.getElementById('technicianName').value,
+                    task_description: document.getElementById('taskDescription').value,
+                    reporter_name: document.getElementById('reporterName').value,
+                    reporter_email: document.getElementById('reporterEmail').value,
+                    priority: document.getElementById('priority').value,
+                    task_id: 'TEST-' + Date.now(),
+                    created_at: new Date().toLocaleString()
+                };
+
+                log('Sending email with parameters:');
+                log(JSON.stringify(templateParams, null, 2));
+
+                const result = await emailjs.send(
+                    emailjsConfig.serviceId,
+                    emailjsConfig.templateId,
+                    templateParams
+                );
+
+                log('SUCCESS: Assignment email sent successfully!');
+                log('Result: ' + JSON.stringify(result));
+                showStatus('✅ Assignment email sent successfully! Check the recipient email.', 'success');
+                
+                // Show success notification
+                showNotification('Email sent successfully!', 'success');
+                
+            } catch (error) {
+                log('ERROR: Failed to send assignment email');
+                log('Error: ' + error.message);
+                log('Status: ' + error.status);
+                log('Text: ' + error.text);
+                showStatus('❌ Failed to send assignment email: ' + error.text, 'error');
+                
+                // Show error notification
+                showNotification('Failed to send email: ' + error.text, 'error');
+            }
+        }
+
+        // Test configuration on load
+        window.addEventListener('load', () => {
+            log('Test page loaded');
+            testConfiguration();
+        });
+    </script>
+</body>
+</html>

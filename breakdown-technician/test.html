@@ -8,7 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
-            margin: 0 auto;
+            margin: 50px auto;
             padding: 20px;
             background-color: #f5f5f5;
         }
@@ -51,10 +51,8 @@
     </style>
 </head>
 <body>
-    <h1>🔧 Technician Dashboard - Test Page</h1>
-    
     <div class="test-card">
-        <h2>Configuration Test</h2>
+        <h1>🔧 Technician Dashboard - Test Page</h1>
         <p>Testing Firebase and EmailJS configuration...</p>
         <div id="configStatus">Loading...</div>
         <button onclick="testConfiguration()">Test Configuration</button>
@@ -80,9 +78,30 @@
         <button onclick="clearLog()">Clear Log</button>
     </div>
 
-    <script src="firebase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.3.3/dist/email.min.js"></script>
-    <script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdibg6llB7PBhVd_VL35FaOtTnAB9w0TQ",
+            authDomain: "breakdown-report-7ce3a.firebaseapp.com",
+            databaseURL: "https://breakdown-report-7ce3a-default-rtdb.europe-west1.firebasedatabase.app/",
+            projectId: "breakdown-report-7ce3a",
+            storageBucket: "breakdown-report-7ce3a.firebasestorage.app",
+            messagingSenderId: "957822686255",
+            appId: "1:957822686255:web:107e975d62de1efe54e2da"
+        };
+
+        // EmailJS configuration
+        const emailjsConfig = {
+            serviceId: "service_dce8m4b",
+            templateId: "template_nlfkx0p",
+            publicKey: "cbi4HSZfXC7jJbj9i"
+        };
+
         function log(message) {
             const logDiv = document.getElementById('testLog');
             const timestamp = new Date().toLocaleTimeString();
@@ -103,28 +122,16 @@
             log('Testing configuration...');
             
             try {
-                if (typeof firebaseConfig === 'undefined') {
-                    setStatus('configStatus', 'Firebase config not found', 'error');
-                    log('ERROR: Firebase config not found');
-                    return;
-                }
-
-                if (typeof emailjsConfig === 'undefined') {
-                    setStatus('configStatus', 'EmailJS config not found', 'error');
-                    log('ERROR: EmailJS config not found');
-                    return;
-                }
-
-                // Check if config values are set
+                // Check Firebase config
                 const firebaseKeys = Object.keys(firebaseConfig);
-                const emailjsKeys = Object.keys(emailjsConfig);
-                
                 const hasFirebaseConfig = firebaseKeys.every(key => 
-                    firebaseConfig[key] && firebaseConfig[key] !== 'your-api-key-here'
+                    firebaseConfig[key] && !firebaseConfig[key].includes('your-')
                 );
                 
+                // Check EmailJS config
+                const emailjsKeys = Object.keys(emailjsConfig);
                 const hasEmailjsConfig = emailjsKeys.every(key => 
-                    emailjsConfig[key] && emailjsConfig[key] !== 'your-service-id'
+                    emailjsConfig[key] && !emailjsConfig[key].includes('your-')
                 );
 
                 if (hasFirebaseConfig && hasEmailjsConfig) {
@@ -145,11 +152,6 @@
             setStatus('firebaseStatus', 'Testing...', 'warning');
             
             try {
-                // Import Firebase modules
-                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js');
-                const { getAuth } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js');
-                const { getDatabase } = await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js');
-                
                 // Initialize Firebase
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
@@ -189,4 +191,3 @@
     </script>
 </body>
 </html>
-

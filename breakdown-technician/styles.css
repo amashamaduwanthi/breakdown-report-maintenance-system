@@ -394,3 +394,52 @@ body {
     }
 }
 
+/* Animation for task cards */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.task-card {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Status indicator animations */
+.status {
+    position: relative;
+    overflow: hidden;
+}
+
+.status::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s;
+}
+
+.status:hover::before {
+    left: 100%;
+}
+
+/* Priority indicators */
+.task-card[data-priority="high"] {
+    border-left: 4px solid #dc3545;
+}
+
+.task-card[data-priority="medium"] {
+    border-left: 4px solid #ffc107;
+}
+
+.task-card[data-priority="low"] {
+    border-left: 4px solid #28a745;
+}
